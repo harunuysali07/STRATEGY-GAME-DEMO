@@ -42,15 +42,33 @@ public class InfintyScrollView : MonoBehaviour
         
     }
 
-    private float lastPositionY;
+    private float lastPositionY = 0;
     public void OnValueChange(Vector2 vector)
     {
-        if (lastPositionY > vector.y + 2)
+        if (content.transform.localPosition.y > lastPositionY + 200)
         {
-            lastPositionY = vector.y;
+            lastPositionY += 200;
+            //var index = (Mathf.FloorToInt(lastPositionY / 200) - 1) % Items.Count;
+            var index = ((Items.Count - 1) + (Mathf.CeilToInt(lastPositionY / 200) - 1) % Items.Count) % Items.Count;
+            var temp = Instantiate(Items[index], Items[index].transform.parent);
+            temp.name = index.ToString();
+            content.GetComponent<VerticalLayoutGroup>().padding.top += 200;
+            Destroy(Items[index].gameObject);
+            Items[index] = temp;
+        }
+        else if (content.transform.localPosition.y < lastPositionY - 200)
+        {
+            lastPositionY -= 200;
+            var index = ((Items.Count - 1) + (Mathf.CeilToInt(lastPositionY / 200) + 1) % Items.Count) % Items.Count;
+            var temp =  Instantiate(Items[index], Items[index].transform.parent);
+            temp.name = index.ToString();
+            temp.SetAsFirstSibling();
+            content.GetComponent<VerticalLayoutGroup>().padding.top -= 200;
+            Destroy(Items[index].gameObject);
+            Items[index] = temp;
         }
 
-        print(vector.y);
+        print(content.transform.localPosition.y);
     }
 
     void ArrangeList()

@@ -6,7 +6,7 @@ public class GameController : MonoBehaviour
 {
     public static GameController Instance;
 
-
+    [SerializeField]
     private Cell currentlySelectedCell;
     private void Awake()
     {

@@ -1,9 +1,10 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class Cell : MonoBehaviour
+public class Cell : MonoBehaviour, IPointerClickHandler
 {
     public Vector2 position;
 
@@ -14,6 +15,14 @@ public class Cell : MonoBehaviour
     public void OnButtonPress()
     {
         GameController.Instance.SelectCell(this);
+    }
+
+    public void OnPointerClick(PointerEventData eventData)
+    {
+        if (eventData.button == PointerEventData.InputButton.Right)
+        {
+            Debug.Log("Right click" + gameObject.name);
+        }
     }
 
     /// <summary>
