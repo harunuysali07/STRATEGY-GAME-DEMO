@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class InfintyScrollView : MonoBehaviour
 {
@@ -26,6 +27,13 @@ public class InfintyScrollView : MonoBehaviour
         }
 
         itemsHeight = Items[0].rect.height;
+
+        //TODO 
+        int count = 0;
+        foreach (var item in content.GetComponentsInChildren<Text>())
+        {
+            item.text = (++count).ToString(); 
+        }
     }
 
     // Update is called once per frame
