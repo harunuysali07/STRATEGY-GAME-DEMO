@@ -6,15 +6,28 @@ using UnityEngine.UI;
 
 public class Cell : MonoBehaviour, IPointerClickHandler
 {
-    public Vector2 position;
+    public Vector2Int position;
 
     public GameObject selectedImage;
     public Image cellImage;
 
     private bool isSelected = false;
+
+    public UnitDataScriptableObject cellUnit;
+    public Cell OwnedByCell;
+    public List<Vector2Int> OwnedCells;
+    public bool isSpawnPoint = false;
+
     public void OnButtonPress()
     {
-        GameController.Instance.SelectCell(this);
+        if (OwnedByCell)
+        {
+            OwnedByCell.OnButtonPress();
+        }
+        else
+        {
+            GameController.Instance.SelectCell(this);
+        }
     }
 
     public void OnPointerClick(PointerEventData eventData)
