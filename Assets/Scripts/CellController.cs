@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class CellController : MonoBehaviour
@@ -18,6 +19,11 @@ public class CellController : MonoBehaviour
     [SerializeField]
     private float _spacing = 10;
     private float _sizeOfCells = 0;
+
+    public Cell MovingCell;
+
+    private float movementSpeed = .15f;
+    private float movementTimer = 0;
 
     [HideInInspector]
     public Cell[,] Cells;
@@ -51,46 +57,56 @@ public class CellController : MonoBehaviour
         }
     }
 
+    void Update()
+    {
+        if (movementTimer < 0)
+        {
+            if (MovingCell)
+            {
+                if (MovingCell.cellUnit.Path.Count > 0 && CheckPositionAvailable(MovingCell.cellUnit.Path[0]))
+                {
+                    var nextCell = Cells[MovingCell.cellUnit.Path[0].x, MovingCell.cellUnit.Path[0].y];
+                    var lastCell = Cells[MovingCell.position.x, MovingCell.position.y];
 
-    public List<Vector2Int> CheckCellsAvailability(Vector2Int center, Vector2Int size, bool isCapableofProduction = false)
+                    nextCell.cellUnit = MovingCell.cellUnit;
+                    nextCell.UpdateCellImage();
+                    nextCell.cellUnit.Path.RemoveAt(0);
+
+                    if (nextCell.cellUnit.Path.Count > 0)
+                    {
+                        MovingCell = nextCell;
+                    }
+                    else
+                    {
+                        MovingCell = null;
+                    }
+
+                    if (lastCell == GameController.Instance.currentlySelectedCell)
+                    {
+                        GameController.Instance.SelectCell(nextCell);
+                    }
+
+                    lastCell.cellUnit = null;
+                    lastCell.UpdateCellImage();
+                }
+            }
+            movementTimer = movementSpeed;
+        }
+        else
+        {
+            movementTimer -= Time.deltaTime;
+        }
+    }
+
+    public List<Vector2Int> CheckCellsAvailability(Vector2Int center, Vector2Int size)
     {
         List<Vector2Int> positions = new List<Vector2Int>();
-        Vector2Int spawnPosition = new Vector2Int(-1, -1);
 
         for (int i = 0; i < size.x; i++)
         {
             for (int j = 0; j < size.y; j++)
             {
                 positions.Add(new Vector2Int(center.x + i, center.y + j));
-            }
-        }
-
-        for (int i = -1; i < size.x + 1; i++)
-        {
-            for (int j = -1; j < size.y; j += size.y + 2)
-            {
-                if (CheckPositionAvailable(new Vector2Int(center.x + i, center.y + j)))
-                {
-                    spawnPosition = new Vector2Int(center.x + i, center.y + j);
-                    break;
-                }
-            }
-
-            if ((i == -1 || i == size.x) && spawnPosition == new Vector2Int(-1, -1))
-            {
-                for (int j = 0; j < size.y - 1; j++)
-                {
-                    if (CheckPositionAvailable(new Vector2Int(center.x + i, center.y + j)))
-                    {
-                        spawnPosition = new Vector2Int(center.x + i, center.y + j);
-                        break;
-                    }
-                }
-            }
-
-            if (spawnPosition != new Vector2Int(-1, -1))
-            {
-                break;
             }
         }
 
@@ -103,34 +119,177 @@ public class CellController : MonoBehaviour
             }
         }
 
-        Debug.Log(spawnPosition + " : " + center + " : " + size);
-
-        if (spawnPosition == new Vector2Int(-1, -1))
-        {
-            return positions;
-        }
-        else
-        {
-            positions.Insert(0, spawnPosition);
-            return positions;
-        }
+        return positions;
     }
 
-    private bool CheckPositionAvailable(Vector2Int position)
+    public Vector2Int FindSpawnPosition(Vector2Int center, Vector2Int size)
+    {
+        Vector2Int spawnPosition = new Vector2Int(-1, -1);
+
+        for (int i = -1; i <= size.x; i++)
+        {
+            for (int j = -1; j <= size.y; j++)
+            {
+                if (CheckPositionAvailable(new Vector2Int(center.x + i, center.y + j)))
+                {
+                    spawnPosition = new Vector2Int(center.x + i, center.y + j);
+                    break;
+                }
+            }
+
+            if (spawnPosition != new Vector2Int(-1, -1))
+            {
+                break;
+            }
+        }
+
+
+        Debug.Log(spawnPosition + " : " + center + " : " + size);
+        return spawnPosition;
+    }
+
+    public bool CheckPositionAvailable(Vector2Int position)
     {
         if (position.x < 0 || position.x >= _verticalCellCount || position.y < 0 || position.y >= _horizontalCellCount)
         {
             return false;
         }
-        else if (Cells[position.x, position.y].OwnedByCell != null || Cells[position.x, position.y].OwnedCells.Count != 0)
+        else if (Cells[position.x, position.y].OwnedByCell != null || Cells[position.x, position.y].OwnedCells.Count != 0 || Cells[position.x, position.y].cellUnit != null)
         {
             return false;
         }
-        else if (Cells.GetValue(position.x, position.y) == null || Cells[position.x, position.y].isSpawnPoint)
+        else if (Cells.GetValue(position.x, position.y) == null)
         {
             return false;
         }
 
         return true;
     }
+
+    public List<Vector2Int> FindPath(Vector2Int startPos, Vector2Int targetPos)
+    {
+        foreach (var item in Cells)
+        {
+            item.gCost = 0;
+            item.hCost = 0;
+            item.parent = null;
+        }
+
+        List<Vector2Int> path = new List<Vector2Int>();
+
+        Cell startNode = Cells[startPos.x, startPos.y];
+        Cell targetNode = Cells[targetPos.x, targetPos.y];
+
+        List<Cell> openSet = new List<Cell>();
+        List<Cell> closeSet = new List<Cell>();
+
+        openSet.Add(startNode);
+
+        int tour = 0;
+
+        while (openSet.Count > 0)
+        {
+            Cell currentNode = openSet[0];
+
+            for (int i = 1; i < openSet.Count; i++)
+            {
+                if (openSet[i].fCost < currentNode.fCost || openSet[i].fCost == currentNode.fCost && openSet[i].hCost < currentNode.hCost)
+                {
+                    currentNode = openSet[i];
+                }
+            }
+
+            tour++;
+
+            if (tour > 1000)
+            {
+                Debug.LogError("İnfinite");
+
+                return path;
+            }
+
+            openSet.Remove(currentNode);
+            closeSet.Add(currentNode);
+
+            if (currentNode == targetNode)
+            {
+                path = RetracePath(startNode, targetNode);
+                break;
+            }
+
+            foreach (Cell neighbour in GetNeighbors(currentNode.position))
+            {
+                if (!CheckPositionAvailable(neighbour.position) || closeSet.Contains(neighbour))
+                {
+                    continue;
+                }
+
+                int newCost = currentNode.gCost + GetDistance(currentNode, neighbour);
+
+                if (newCost < neighbour.gCost || !openSet.Contains(neighbour))
+                {
+                    neighbour.gCost = newCost;
+                    neighbour.hCost = GetDistance(neighbour, targetNode);
+                    neighbour.parent = currentNode;
+
+                    if (!openSet.Contains(neighbour))
+                    {
+                        openSet.Add(neighbour);
+                    }
+                }
+            }
+        }
+
+        return path;
+    }
+
+    public List<Vector2Int> RetracePath(Cell startNode, Cell endNode)
+    {
+        List<Vector2Int> pathR = new List<Vector2Int>();
+        Cell currentNode = endNode;
+
+        while (currentNode != startNode)
+        {
+            Vector2Int next = currentNode.position;
+            pathR.Add(next);
+            currentNode = currentNode.parent;
+        }
+        pathR.Reverse();
+
+        return pathR;
+    }
+
+    public List<Cell> GetNeighbors(Vector2Int center)
+    {
+        List<Cell> neighbors = new List<Cell>();
+
+        for (int i = -1; i <= 1; i++)
+        {
+            for (int j = -1; j <= 1; j++)
+            {
+                if (CheckPositionAvailable(new Vector2Int(center.x + i, center.y + j)))
+                {
+                    neighbors.Add(Cells[center.x + i, center.y + j]);
+                }
+            }
+        }
+
+        return neighbors;
+    }
+
+    public int GetDistance(Cell A, Cell B)
+    {
+        int distX = Mathf.Abs(A.position.x - B.position.x);
+        int distY = Mathf.Abs(A.position.y - B.position.y);
+
+        if (distX > distY)
+        {
+            return 14 * distY + 10 * (distX - distY);
+        }
+        else
+        {
+            return 14 * distX + 10 * (distY - distX);
+        }
+    }
 }
+
