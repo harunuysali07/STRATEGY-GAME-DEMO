@@ -15,9 +15,9 @@ public class ListItem : MonoBehaviour
 
     }
 
-    public void SetItem(UnitDataScriptableObject Item = null)
+    public void SetItem(UnitData Item = null)
     {
-        if (Item)
+        if (Item != null)
         {
             Item_image.enabled = true;
             Item_image.sprite = Item._Sprite;

@@ -11,10 +11,8 @@ public class CellController : MonoBehaviour
 
     public Transform content;
 
-    [SerializeField]
-    private int _verticalCellCount = 15;
-    [SerializeField]
-    private int _horizontalCellCount = 15;
+    public int _verticalCellCount = 15;
+    public int _horizontalCellCount = 15;
 
     [SerializeField]
     private float _spacing = 10;
@@ -143,8 +141,6 @@ public class CellController : MonoBehaviour
             }
         }
 
-
-        Debug.Log(spawnPosition + " : " + center + " : " + size);
         return spawnPosition;
     }
 
@@ -224,12 +220,12 @@ public class CellController : MonoBehaviour
                     continue;
                 }
 
-                int newCost = currentNode.gCost + GetDistance(currentNode, neighbour);
+                int newCost = currentNode.gCost + GetDistance(currentNode.position, neighbour.position);
 
                 if (newCost < neighbour.gCost || !openSet.Contains(neighbour))
                 {
                     neighbour.gCost = newCost;
-                    neighbour.hCost = GetDistance(neighbour, targetNode);
+                    neighbour.hCost = GetDistance(neighbour.position, targetNode.position);
                     neighbour.parent = currentNode;
 
                     if (!openSet.Contains(neighbour))
@@ -277,10 +273,24 @@ public class CellController : MonoBehaviour
         return neighbors;
     }
 
-    public int GetDistance(Cell A, Cell B)
+    public List<Cell> GetNeighboursShortedByDistanceToTarget(Vector2Int center, Vector2Int target)
     {
-        int distX = Mathf.Abs(A.position.x - B.position.x);
-        int distY = Mathf.Abs(A.position.y - B.position.y);
+        List<Cell> neighbors = GetNeighbors(target);
+
+        foreach (var item in neighbors)
+        {
+            item.hCost = GetDistance(center, item.position);
+        }
+
+        neighbors = neighbors.OrderBy(x => x.hCost).ToList();
+
+        return neighbors;
+    }
+
+    public int GetDistance(Vector2Int A, Vector2Int B)
+    {
+        int distX = Mathf.Abs(A.x - B.x);
+        int distY = Mathf.Abs(A.y - B.y);
 
         if (distX > distY)
         {

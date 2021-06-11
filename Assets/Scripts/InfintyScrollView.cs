@@ -46,7 +46,7 @@ public class InfintyScrollView : MonoBehaviour
         
     }
 
-    public void SetItems(List<UnitDataScriptableObject> UnitList)
+    public void SetItems(List<UnitData> UnitList)
     {
         int Unitindex = -1;
         if (UnitList.Count < 1)

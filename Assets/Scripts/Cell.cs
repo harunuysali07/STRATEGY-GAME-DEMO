@@ -11,7 +11,9 @@ public class Cell : MonoBehaviour, IPointerClickHandler
     public GameObject selectedImage;
     public Image cellImage;
 
-    public UnitDataScriptableObject cellUnit;
+    public UnitData cellUnit;
+    public UnitType unitType;
+
     public Cell OwnedByCell;
     public List<Vector2Int> OwnedCells;
 
@@ -23,14 +25,20 @@ public class Cell : MonoBehaviour, IPointerClickHandler
     private Sprite cellDefaultSprite;
 
     private float attackTimer;
+
     private void Start()
     {
         cellDefaultSprite = cellImage.sprite;
     }
 
+    public void SetUnitData(UnitData _Unit)
+    {
+        cellUnit = Instantiate(_Unit);
+    }
+
     private void Update()
     {
-        if (cellUnit)
+        if (cellUnit != null)
         {
             if (cellUnit._Health < 0)
             {
@@ -44,17 +52,11 @@ public class Cell : MonoBehaviour, IPointerClickHandler
 
                 OwnedCells = new List<Vector2Int>();
             }
-            else
+            else if(cellUnit.targetCell != null && CellController.Instance.GetDistance(position, cellUnit.targetCell.position) < 15)
             {
                 if (attackTimer < 0)
                 {
-                    foreach (var item in CellController.Instance.GetNeighbors(position))
-                    {
-                        if (item.cellUnit)
-                        {
-
-                        }
-                    }
+                    Attack();
                     attackTimer = 1f / cellUnit._AttackPerSecond;
                 }
                 else
@@ -62,6 +64,24 @@ public class Cell : MonoBehaviour, IPointerClickHandler
                     attackTimer -= Time.deltaTime;
                 }
             }
+        }
+    }
+
+    private void Attack()
+    {
+        if (cellUnit.targetCell.cellUnit._Health > 0)
+        {
+            cellUnit.targetCell.cellUnit._Health -= cellUnit._Damage;
+            print(cellUnit._UnitName + " Attaced to : " + cellUnit.targetCell.cellUnit._UnitName + " Health = " + cellUnit.targetCell.cellUnit._Health);
+
+            if (cellUnit.targetCell.cellUnit._Health <= 0)
+            {
+                cellUnit.targetCell = null;
+            }
+        }
+        else
+        {
+            cellUnit.targetCell = null;
         }
     }
 
@@ -73,7 +93,14 @@ public class Cell : MonoBehaviour, IPointerClickHandler
         }
         else
         {
-            GameController.Instance.SelectCell(this);
+            if (cellUnit == null)
+            {
+                GameController.Instance.SelectCell(this);
+            }
+            else if(unitType == UnitType.Ally)
+            {
+                GameController.Instance.SelectCell(this);
+            }
         }
     }
 
@@ -99,7 +126,7 @@ public class Cell : MonoBehaviour, IPointerClickHandler
         {
             cellImage.sprite = OwnedByCell.cellImage.sprite;
         }
-        else if (cellUnit)
+        else if (cellUnit != null)
         {
             cellImage.sprite = cellUnit._Sprite;
         }
@@ -108,4 +135,11 @@ public class Cell : MonoBehaviour, IPointerClickHandler
             cellImage.sprite = cellDefaultSprite;
         }
     }
+}
+
+public enum UnitType
+{
+    Ally,
+    Neutral,
+    Enemy
 }

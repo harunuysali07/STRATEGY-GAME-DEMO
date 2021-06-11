@@ -2,8 +2,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-[CreateAssetMenu(fileName = "Data", menuName = "ScriptableObjects/UnitData", order = 1)]
-public class UnitDataScriptableObject : ScriptableObject
+public class UnitData : MonoBehaviour
 {
     public float _Health;
     public float _Damage;
@@ -14,8 +13,10 @@ public class UnitDataScriptableObject : ScriptableObject
     public string _UnitName;
     public Sprite _Sprite;
 
+    [HideInInspector] public Cell targetCell;
+
     public Vector2Int Size;
     public List<Vector2Int> Path;
 
-    public List<UnitDataScriptableObject> ProducitonUnits;
+    public List<UnitData> ProducitonUnits;
 }

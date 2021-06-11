@@ -8,17 +8,22 @@ public class GameController : MonoBehaviour
     public static GameController Instance;
 
     [Header("Production")]
-    public List<UnitDataScriptableObject> ProductionUnits;
+    public List<UnitData> ProductionUnits;
 
     [Header("Information")]
     public Image InformationImage;
     public Text InformationName;
-
     public List<Button> TroopProductionButtons;
+
+    [Header("UI")]
+    public GameObject warningPanel;
+    public Text warningText;
 
     [Space(20)]
     [HideInInspector]
     public Cell currentlySelectedCell;
+
+    private Coroutine warningCoroutine;
     private void Awake()
     {
         Instance = this;
@@ -43,7 +48,7 @@ public class GameController : MonoBehaviour
 
         currentlySelectedCell = _SelectedCell;
 
-        if (currentlySelectedCell.cellUnit)
+        if (currentlySelectedCell.cellUnit != null)
         {
             if (!InformationImage.isActiveAndEnabled)
             {
@@ -99,25 +104,47 @@ public class GameController : MonoBehaviour
         {
             if (currentlySelectedCell.cellUnit._isMovable)
             {
-                currentlySelectedCell.cellUnit.Path = CellController.Instance.FindPath(currentlySelectedCell.position, _TargetCell.position);
+                if (CellController.Instance.CheckPositionAvailable(_TargetCell.position))
+                {
+                    //Move to an empty cell
+                    currentlySelectedCell.cellUnit.Path = CellController.Instance.FindPath(currentlySelectedCell.position, _TargetCell.position);
+                    CellController.Instance.MovingCell = currentlySelectedCell;
+                }
+                else
+                {
+                    if (currentlySelectedCell.cellUnit._Damage > 0 && CellController.Instance.Cells[_TargetCell.position.x, _TargetCell.position.y].unitType == UnitType.Enemy)
+                    {
+                        currentlySelectedCell.cellUnit.targetCell = _TargetCell;
+                    }
 
-                //if (CellController.Instance.MovingList.Contains(currentlySelectedCell))
-                //{
-                //    CellController.Instance.MovingList.Remove(currentlySelectedCell);
-                //}
-                CellController.Instance.MovingCell = currentlySelectedCell;
+                    if (CellController.Instance.GetDistance(currentlySelectedCell.position, _TargetCell.position) > 15)
+                    {
+                        var neighbours = CellController.Instance.GetNeighboursShortedByDistanceToTarget(currentlySelectedCell.position, _TargetCell.position);
+
+                        foreach (var item in neighbours)
+                        {
+                            if (CellController.Instance.CheckPositionAvailable(item.position))
+                            {
+                                currentlySelectedCell.cellUnit.Path = CellController.Instance.FindPath(currentlySelectedCell.position, item.position);
+                                CellController.Instance.MovingCell = currentlySelectedCell;
+
+                                break;
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 
-    public void InstatiateUnit(UnitDataScriptableObject Unit)
+    public void InstatiateUnit(UnitData Unit)
     {
         if (currentlySelectedCell)
         {
             List<Vector2Int> AvailableCells = CellController.Instance.CheckCellsAvailability(currentlySelectedCell.position, Unit.Size);
             if (AvailableCells.Count != Unit.Size.x * Unit.Size.y)
             {
-                Debug.LogError("Selected Cells Not Available !");
+                warningCoroutine = StartCoroutine(ShowWarning("Selected Cells Not Available !!"));
             }
             else
             {
@@ -126,7 +153,7 @@ public class GameController : MonoBehaviour
                     if (currentlySelectedCell.position == position)
                     {
                         currentlySelectedCell.OwnedCells = AvailableCells;
-                        currentlySelectedCell.cellUnit = Unit;
+                        currentlySelectedCell.SetUnitData(Unit);
 
                         currentlySelectedCell.UpdateCellImage();
                     }
@@ -136,36 +163,48 @@ public class GameController : MonoBehaviour
                         CellController.Instance.Cells[position.x, position.y].UpdateCellImage();
                     }
                 }
-            }
 
-            SelectCell(currentlySelectedCell);
+                SelectCell(currentlySelectedCell);
+            }
         }
         else
         {
-            Debug.LogError("Önce bi hücre seçiniz !!");
+            warningCoroutine = StartCoroutine(ShowWarning("Select an empty cell first !!"));
         }
     }
 
-    public void ProduceTroops(UnitDataScriptableObject Troops)
+    public void ProduceTroops(UnitData Troops)
     {
         Vector2Int spawnPoint = CellController.Instance.FindSpawnPosition(currentlySelectedCell.position, currentlySelectedCell.cellUnit.Size);
 
         if (spawnPoint == new Vector2Int(-1, -1))
         {
-            Debug.LogError("This product unabled to produce !");
+            warningCoroutine = StartCoroutine(ShowWarning("This product unabled to produce !"));
         }
         else
         {
             if (CellController.Instance.Cells.GetValue(spawnPoint.x, spawnPoint.y) != null && CellController.Instance.CheckPositionAvailable(spawnPoint))
             {
-                CellController.Instance.Cells[spawnPoint.x, spawnPoint.y].cellUnit = Troops;
+                CellController.Instance.Cells[spawnPoint.x, spawnPoint.y].SetUnitData(Troops);
+                CellController.Instance.Cells[spawnPoint.x, spawnPoint.y].unitType = UnitType.Ally;
                 CellController.Instance.Cells[spawnPoint.x, spawnPoint.y].UpdateCellImage();
             }
         }
     }
 
-    public void MoveCell()
+    IEnumerator ShowWarning(string warning)
     {
+        warningPanel.SetActive(true);
+        warningText.text = warning;
 
+        yield return new WaitForSeconds(3);
+
+        warningPanel.SetActive(false);
+    }
+
+    public void OkayButton()
+    {
+        StopCoroutine(warningCoroutine);
+        warningPanel.SetActive(false);
     }
 }
