@@ -54,8 +54,21 @@ public class AIController : MonoBehaviour
             if (CellController.Instance.Cells.GetValue(spawnPoint.x, spawnPoint.y) != null && CellController.Instance.CheckPositionAvailable(spawnPoint))
             {
                 CellController.Instance.Cells[spawnPoint.x, spawnPoint.y].SetUnitData(enemyUnits[Random.Range(0, enemyUnits.Count)]);
-                CellController.Instance.Cells[spawnPoint.x, spawnPoint.y].unitType = UnitType.Enemy;
                 CellController.Instance.Cells[spawnPoint.x, spawnPoint.y].UpdateCellImage();
+
+                var target = CellController.Instance.GetClosestEnemyUnit(spawnPoint, UnitType.Ally);
+                if (target != null && target != CellController.Instance.Cells[spawnPoint.x, spawnPoint.y])
+                {
+                    var neighbours = CellController.Instance.GetNeighboursofTarget(spawnPoint, target.position);
+                    foreach (var item in neighbours)
+                    {
+                        if (CellController.Instance.CheckPositionAvailable(item.position))
+                        {
+                            CellController.Instance.Cells[spawnPoint.x, spawnPoint.y].cellUnit.Path = CellController.Instance.FindPath(spawnPoint, item.position);
+                            break;
+                        }
+                    }
+                }
                 break;
             }
             else

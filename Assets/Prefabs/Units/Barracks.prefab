@@ -49,8 +49,9 @@ MonoBehaviour:
   _AttackPerSecond: 0
   _UnitName: Barracks
   _Sprite: {fileID: 21300000, guid: 7e7f59008a94ddc4f9060aeecb752814, type: 3}
+  targetCell: {fileID: 0}
   Size: {x: 3, y: 3}
   Path: []
   ProducitonUnits:
   - {fileID: 5060072846756249641, guid: 7cad5bc23c99f5147acb87a8742bd615, type: 3}
-  - {fileID: 0}
+  - {fileID: 1076516520851188790, guid: ce3a99e1a93fb384d8fccc3e5960644a, type: 3}

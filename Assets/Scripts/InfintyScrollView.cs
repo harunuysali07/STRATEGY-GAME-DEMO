@@ -11,6 +11,7 @@ public class InfintyScrollView : MonoBehaviour
 
     [SerializeField]
     private List<RectTransform> Items;
+    private float lastPositionY = 0;
 
     private void Awake()
     {
@@ -29,23 +30,10 @@ public class InfintyScrollView : MonoBehaviour
         }
     }
 
-    // Start is called before the first frame update
-    void Start()
-    {
-        ////HACK
-        //int count = 0;
-        //foreach (var item in content.GetComponentsInChildren<Text>())
-        //{
-        //    item.text = (++count).ToString();
-        //}
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
+    /// <summary>
+    /// Set Items on Infinity Scroll View
+    /// </summary>
+    /// <param name="UnitList"></param>
     public void SetItems(List<UnitData> UnitList)
     {
         int Unitindex = -1;
@@ -71,7 +59,10 @@ public class InfintyScrollView : MonoBehaviour
         }
     }
 
-    private float lastPositionY = 0;
+    /// <summary>
+    /// Update list when scroll views value changed.
+    /// </summary>
+    /// <param name="vector"></param>
     public void OnValueChange(Vector2 vector)
     {
         if (content.transform.localPosition.y > lastPositionY + 200)

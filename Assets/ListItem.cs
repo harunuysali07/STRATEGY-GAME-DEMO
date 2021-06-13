@@ -9,12 +9,10 @@ public class ListItem : MonoBehaviour
     public Text Item_text;
     public Button Item_button;
 
-    // Start is called before the first frame update
-    void Start()
-    {
-
-    }
-
+    /// <summary>
+    /// Set Item's visible element's 
+    /// </summary>
+    /// <param name="Item"></param>
     public void SetItem(UnitData Item = null)
     {
         if (Item != null)

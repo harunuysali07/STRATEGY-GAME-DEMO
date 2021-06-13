@@ -29,16 +29,9 @@ public class GameController : MonoBehaviour
         Instance = this;
     }
 
-    // Start is called before the first frame update
     void Start()
     {
         InfintyScrollView.Instance.SetItems(ProductionUnits);
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-
     }
 
     public void SelectCell(Cell _SelectedCell)
@@ -108,25 +101,23 @@ public class GameController : MonoBehaviour
                 {
                     //Move to an empty cell
                     currentlySelectedCell.cellUnit.Path = CellController.Instance.FindPath(currentlySelectedCell.position, _TargetCell.position);
-                    CellController.Instance.MovingCell = currentlySelectedCell;
                 }
                 else
                 {
-                    if (currentlySelectedCell.cellUnit._Damage > 0 && CellController.Instance.Cells[_TargetCell.position.x, _TargetCell.position.y].unitType == UnitType.Enemy)
+                    if (currentlySelectedCell.cellUnit._Damage > 0 && CellController.Instance.Cells[_TargetCell.position.x, _TargetCell.position.y].cellUnit.unitType == UnitType.Enemy)
                     {
                         currentlySelectedCell.cellUnit.targetCell = _TargetCell;
                     }
 
                     if (CellController.Instance.GetDistance(currentlySelectedCell.position, _TargetCell.position) > 15)
                     {
-                        var neighbours = CellController.Instance.GetNeighboursShortedByDistanceToTarget(currentlySelectedCell.position, _TargetCell.position);
+                        var neighbours = CellController.Instance.GetNeighboursofTarget(currentlySelectedCell.position, _TargetCell.position);
 
                         foreach (var item in neighbours)
                         {
                             if (CellController.Instance.CheckPositionAvailable(item.position))
                             {
                                 currentlySelectedCell.cellUnit.Path = CellController.Instance.FindPath(currentlySelectedCell.position, item.position);
-                                CellController.Instance.MovingCell = currentlySelectedCell;
 
                                 break;
                             }
@@ -186,7 +177,6 @@ public class GameController : MonoBehaviour
             if (CellController.Instance.Cells.GetValue(spawnPoint.x, spawnPoint.y) != null && CellController.Instance.CheckPositionAvailable(spawnPoint))
             {
                 CellController.Instance.Cells[spawnPoint.x, spawnPoint.y].SetUnitData(Troops);
-                CellController.Instance.Cells[spawnPoint.x, spawnPoint.y].unitType = UnitType.Ally;
                 CellController.Instance.Cells[spawnPoint.x, spawnPoint.y].UpdateCellImage();
             }
         }

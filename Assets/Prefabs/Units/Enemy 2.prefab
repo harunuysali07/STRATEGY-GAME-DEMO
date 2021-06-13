@@ -49,6 +49,11 @@ MonoBehaviour:
   _AttackPerSecond: 2
   _UnitName: Goblin Archer
   _Sprite: {fileID: 21300000, guid: 560f3e575e193c046b091661c3cb7573, type: 3}
+  _movementSpeed: 0.15
+  _movementTimer: 0
+  _hitTimer: 0
+  targetCell: {fileID: 0}
   Size: {x: 1, y: 1}
   Path: []
   ProducitonUnits: []
+  unitType: 1

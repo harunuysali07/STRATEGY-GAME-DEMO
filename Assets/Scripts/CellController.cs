@@ -18,11 +18,6 @@ public class CellController : MonoBehaviour
     private float _spacing = 10;
     private float _sizeOfCells = 0;
 
-    public Cell MovingCell;
-
-    private float movementSpeed = .15f;
-    private float movementTimer = 0;
-
     [HideInInspector]
     public Cell[,] Cells;
 
@@ -33,6 +28,14 @@ public class CellController : MonoBehaviour
 
     // Start is called before the first frame update
     void Start()
+    {
+        CreateGrid();
+    }
+
+    /// <summary>
+    /// Create grid of cells with requested amount
+    /// </summary>
+    protected void CreateGrid()
     {
         Cells = new Cell[_verticalCellCount, _horizontalCellCount];
 
@@ -55,47 +58,12 @@ public class CellController : MonoBehaviour
         }
     }
 
-    void Update()
-    {
-        if (movementTimer < 0)
-        {
-            if (MovingCell)
-            {
-                if (MovingCell.cellUnit.Path.Count > 0 && CheckPositionAvailable(MovingCell.cellUnit.Path[0]))
-                {
-                    var nextCell = Cells[MovingCell.cellUnit.Path[0].x, MovingCell.cellUnit.Path[0].y];
-                    var lastCell = Cells[MovingCell.position.x, MovingCell.position.y];
-
-                    nextCell.cellUnit = MovingCell.cellUnit;
-                    nextCell.UpdateCellImage();
-                    nextCell.cellUnit.Path.RemoveAt(0);
-
-                    if (nextCell.cellUnit.Path.Count > 0)
-                    {
-                        MovingCell = nextCell;
-                    }
-                    else
-                    {
-                        MovingCell = null;
-                    }
-
-                    if (lastCell == GameController.Instance.currentlySelectedCell)
-                    {
-                        GameController.Instance.SelectCell(nextCell);
-                    }
-
-                    lastCell.cellUnit = null;
-                    lastCell.UpdateCellImage();
-                }
-            }
-            movementTimer = movementSpeed;
-        }
-        else
-        {
-            movementTimer -= Time.deltaTime;
-        }
-    }
-
+    /// <summary>
+    /// Get available cells around center
+    /// </summary>
+    /// <param name="center"></param>
+    /// <param name="size"></param>
+    /// <returns></returns>
     public List<Vector2Int> CheckCellsAvailability(Vector2Int center, Vector2Int size)
     {
         List<Vector2Int> positions = new List<Vector2Int>();
@@ -113,13 +81,19 @@ public class CellController : MonoBehaviour
             if (!CheckPositionAvailable(position))
             {
                 positions = new List<Vector2Int>();
-                break;
+                return positions;
             }
         }
 
         return positions;
     }
 
+    /// <summary>
+    /// Get empty cells around center
+    /// </summary>
+    /// <param name="center"></param>
+    /// <param name="size"></param>
+    /// <returns></returns>
     public Vector2Int FindSpawnPosition(Vector2Int center, Vector2Int size)
     {
         Vector2Int spawnPosition = new Vector2Int(-1, -1);
@@ -144,6 +118,11 @@ public class CellController : MonoBehaviour
         return spawnPosition;
     }
 
+    /// <summary>
+    /// Check if cell if available to fill or move
+    /// </summary>
+    /// <param name="position"></param>
+    /// <returns></returns>
     public bool CheckPositionAvailable(Vector2Int position)
     {
         if (position.x < 0 || position.x >= _verticalCellCount || position.y < 0 || position.y >= _horizontalCellCount)
@@ -162,6 +141,12 @@ public class CellController : MonoBehaviour
         return true;
     }
 
+    /// <summary>
+    /// Find shortest path with A* algortihm
+    /// </summary>
+    /// <param name="startPos">Start position of path</param>
+    /// <param name="targetPos">Target position of path </param>
+    /// <returns></returns>
     public List<Vector2Int> FindPath(Vector2Int startPos, Vector2Int targetPos)
     {
         foreach (var item in Cells)
@@ -239,7 +224,8 @@ public class CellController : MonoBehaviour
         return path;
     }
 
-    public List<Vector2Int> RetracePath(Cell startNode, Cell endNode)
+    //Turn path to a vector2Int list
+    protected List<Vector2Int> RetracePath(Cell startNode, Cell endNode)
     {
         List<Vector2Int> pathR = new List<Vector2Int>();
         Cell currentNode = endNode;
@@ -255,6 +241,11 @@ public class CellController : MonoBehaviour
         return pathR;
     }
 
+    /// <summary>
+    /// Get empty neighbours of a target - 1 by 1 around (count = 8 aprox.)
+    /// </summary>
+    /// <param name="center"></param>
+    /// <returns></returns>
     public List<Cell> GetNeighbors(Vector2Int center)
     {
         List<Cell> neighbors = new List<Cell>();
@@ -273,7 +264,53 @@ public class CellController : MonoBehaviour
         return neighbors;
     }
 
-    public List<Cell> GetNeighboursShortedByDistanceToTarget(Vector2Int center, Vector2Int target)
+    /// <summary>
+    /// Get neighbours that contains Unity with given UnitType
+    /// </summary>
+    /// <param name="center"></param>
+    /// <param name="targetType"></param>
+    /// <returns></returns>
+    public List<Cell> GetNeighborsWithUnits(Vector2Int center, UnitType targetType)
+    {
+        List<Cell> neighbors = new List<Cell>();
+
+        for (int i = -1; i <= 1; i++)
+        {
+            for (int j = -1; j <= 1; j++)
+            {
+                if (center.x + i >= 0 && center.x + i < _verticalCellCount && center.y + j >= 0 && center.y + j < _horizontalCellCount && !(i == 0 && j == 0))
+                {
+                    if (!CheckPositionAvailable(new Vector2Int(center.x + i, center.y + j)))
+                    {
+                        if (Cells[center.x + i, center.y + j].cellUnit != null)
+                        {
+                            if (Cells[center.x + i, center.y + j].cellUnit.unitType == targetType)
+                            {
+                                neighbors.Add(Cells[center.x + i, center.y + j]);
+                            }
+                        }
+                        else if (Cells[center.x + i, center.y + j].OwnedByCell != null)
+                        {
+                            if (Cells[center.x + i, center.y + j].OwnedByCell.cellUnit.unitType == targetType)
+                            {
+                                neighbors.Add(Cells[center.x + i, center.y + j]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return neighbors;
+    }
+
+    /// <summary>
+    /// Get empty neighbours of a target ordered by closest to target
+    /// </summary>
+    /// <param name="center"></param>
+    /// <param name="target"></param>
+    /// <returns></returns>
+    public List<Cell> GetNeighboursofTarget(Vector2Int center, Vector2Int target)
     {
         List<Cell> neighbors = GetNeighbors(target);
 
@@ -287,6 +324,63 @@ public class CellController : MonoBehaviour
         return neighbors;
     }
 
+    /// <summary>
+    /// Find closest Emeny Unity on all cells
+    /// </summary>
+    /// <param name="center"></param>
+    /// <param name="targetType"></param>
+    /// <returns></returns>
+    public Cell GetClosestEnemyUnit(Vector2Int center, UnitType targetType)
+    {
+        List<Cell> neighbors = new List<Cell>();
+
+        for (int i = -_verticalCellCount; i <= _verticalCellCount; i++)
+        {
+            for (int j = -_horizontalCellCount; j <= _horizontalCellCount; j++)
+            {
+                if (center.x + i >= 0 && center.x + i < _verticalCellCount && center.y + j >= 0 && center.y + j < _horizontalCellCount && !(i == 0 && j == 0))
+                {
+                    if (!CheckPositionAvailable(new Vector2Int(center.x + i, center.y + j)))
+                    {
+                        if (Cells[center.x + i, center.y + j].cellUnit != null)
+                        {
+                            if (Cells[center.x + i, center.y + j].cellUnit.unitType == targetType)
+                            {
+                                Cells[center.x + i, center.y + j].hCost = GetDistance(center, Cells[center.x + i, center.y + j].position);
+                                neighbors.Add(Cells[center.x + i, center.y + j]);
+                            }
+                        }
+                        else if (Cells[center.x + i, center.y + j].OwnedByCell != null)
+                        {
+                            if (Cells[center.x + i, center.y + j].OwnedByCell.cellUnit.unitType == targetType)
+                            {
+                                Cells[center.x + i, center.y + j].hCost = GetDistance(center, Cells[center.x + i, center.y + j].position);
+                                neighbors.Add(Cells[center.x + i, center.y + j]);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        neighbors = neighbors.OrderBy(x => x.hCost).ToList();
+
+        if (neighbors.Count > 0)
+        {
+            return neighbors[0];
+        }
+        else
+        {
+            return Cells[center.x, center.y];
+        }
+    }
+
+    /// <summary>
+    /// Get distance between two cells.
+    /// </summary>
+    /// <param name="A"></param>
+    /// <param name="B"></param>
+    /// <returns></returns>
     public int GetDistance(Vector2Int A, Vector2Int B)
     {
         int distX = Mathf.Abs(A.x - B.x);

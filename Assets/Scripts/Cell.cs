@@ -12,7 +12,6 @@ public class Cell : MonoBehaviour, IPointerClickHandler
     public Image cellImage;
 
     public UnitData cellUnit;
-    public UnitType unitType;
 
     public Cell OwnedByCell;
     public List<Vector2Int> OwnedCells;
@@ -23,8 +22,6 @@ public class Cell : MonoBehaviour, IPointerClickHandler
     [HideInInspector] public Cell parent;
 
     private Sprite cellDefaultSprite;
-
-    private float attackTimer;
 
     private void Start()
     {
@@ -40,7 +37,7 @@ public class Cell : MonoBehaviour, IPointerClickHandler
     {
         if (cellUnit != null)
         {
-            if (cellUnit._Health < 0)
+            if (cellUnit._Health <= 0)
             {
                 cellUnit = null;
                 UpdateCellImage();
@@ -48,20 +45,73 @@ public class Cell : MonoBehaviour, IPointerClickHandler
                 foreach (var item in OwnedCells)
                 {
                     CellController.Instance.Cells[item.x, item.y].OwnedByCell = null;
+                    CellController.Instance.Cells[item.x, item.y].UpdateCellImage();
                 }
 
                 OwnedCells = new List<Vector2Int>();
-            }
-            else if(cellUnit.targetCell != null && CellController.Instance.GetDistance(position, cellUnit.targetCell.position) < 15)
-            {
-                if (attackTimer < 0)
+
+                if (GameController.Instance.currentlySelectedCell == this)
                 {
-                    Attack();
-                    attackTimer = 1f / cellUnit._AttackPerSecond;
+                    GameController.Instance.SelectCell(this);
+                }
+            }
+            else if (cellUnit.Path.Count > 0 && CellController.Instance.CheckPositionAvailable(cellUnit.Path[0]))
+            {
+                if (cellUnit._movementTimer < 0)
+                {
+                    cellUnit._movementTimer = cellUnit._movementSpeed;
+
+                    var nextCell = CellController.Instance.Cells[cellUnit.Path[0].x, cellUnit.Path[0].y];
+
+                    nextCell.cellUnit = cellUnit;
+                    nextCell.UpdateCellImage();
+                    nextCell.cellUnit.Path.RemoveAt(0);
+
+                    if (GameController.Instance.currentlySelectedCell == this)
+                    {
+                        GameController.Instance.SelectCell(nextCell);
+                    }
+
+                    cellUnit = null;
+                    UpdateCellImage();
                 }
                 else
                 {
-                    attackTimer -= Time.deltaTime;
+                    cellUnit._movementTimer -= Time.deltaTime;
+                }
+            }
+            else if (cellUnit.targetCell != null && cellUnit._Damage > 0 && CellController.Instance.GetDistance(position, cellUnit.targetCell.position) < 15)
+            {
+                if (cellUnit.targetCell.cellUnit != null || cellUnit.targetCell.OwnedByCell?.cellUnit != null)
+                {
+                    if (cellUnit._hitTimer < 0)
+                    {
+                        Attack();
+                        cellUnit._hitTimer = 1f / cellUnit._AttackPerSecond;
+                    }
+                    else
+                    {
+                        cellUnit._hitTimer -= Time.deltaTime;
+                    }
+                }
+            }
+            else
+            {
+                if (cellUnit.unitType == UnitType.Ally)
+                {
+                    var targets = CellController.Instance.GetNeighborsWithUnits(position, UnitType.Enemy);
+                    if (targets.Count  > 0)
+                    {
+                        cellUnit.targetCell = targets[0];
+                    }
+                }
+                else if (cellUnit.unitType == UnitType.Enemy)
+                {
+                    var targets = CellController.Instance.GetNeighborsWithUnits(position, UnitType.Ally);
+                    if (targets.Count > 0)
+                    {
+                        cellUnit.targetCell = targets[0];
+                    }
                 }
             }
         }
@@ -69,19 +119,38 @@ public class Cell : MonoBehaviour, IPointerClickHandler
 
     private void Attack()
     {
-        if (cellUnit.targetCell.cellUnit._Health > 0)
+        if (cellUnit.targetCell.cellUnit != null)
         {
-            cellUnit.targetCell.cellUnit._Health -= cellUnit._Damage;
-            print(cellUnit._UnitName + " Attaced to : " + cellUnit.targetCell.cellUnit._UnitName + " Health = " + cellUnit.targetCell.cellUnit._Health);
+            if (cellUnit.targetCell.cellUnit._Health > 0)
+            {
+                cellUnit.targetCell.cellUnit._Health -= cellUnit._Damage;
 
-            if (cellUnit.targetCell.cellUnit._Health <= 0)
+                if (cellUnit.targetCell.cellUnit._Health <= 0)
+                {
+                    cellUnit.targetCell = null;
+                }
+            }
+            else
             {
                 cellUnit.targetCell = null;
             }
         }
-        else
+        else if(cellUnit.targetCell.OwnedByCell.cellUnit != null)
         {
-            cellUnit.targetCell = null;
+            if (cellUnit.targetCell.OwnedByCell.cellUnit._Health > 0)
+            {
+                cellUnit.targetCell.OwnedByCell.cellUnit._Health -= cellUnit._Damage;
+                //print(cellUnit._UnitName + " Attaced to : " + cellUnit.targetCell.OwnedByCell.cellUnit._UnitName + " Health = " + cellUnit.targetCell.OwnedByCell.cellUnit._Health);
+
+                if (cellUnit.targetCell.OwnedByCell.cellUnit._Health <= 0)
+                {
+                    cellUnit.targetCell = null;
+                }
+            }
+            else
+            {
+                cellUnit.targetCell = null;
+            }
         }
     }
 
@@ -97,7 +166,7 @@ public class Cell : MonoBehaviour, IPointerClickHandler
             {
                 GameController.Instance.SelectCell(this);
             }
-            else if(unitType == UnitType.Ally)
+            else if (cellUnit.unitType == UnitType.Ally)
             {
                 GameController.Instance.SelectCell(this);
             }
@@ -135,11 +204,4 @@ public class Cell : MonoBehaviour, IPointerClickHandler
             cellImage.sprite = cellDefaultSprite;
         }
     }
-}
-
-public enum UnitType
-{
-    Ally,
-    Neutral,
-    Enemy
 }
